@@ -4,7 +4,7 @@
 import itertools as I
 import re
 
-hexstr=r"""
+hexstr = r"""
 :10028000F8A9994820D10220EB02A241A00220C681
 :1002900002684820D10220F00220F70220FE026806
 :1002A00038E9014820D10220EB0220F70268C9009A
@@ -32,86 +32,96 @@ hexstr=r"""
 address = 0x280
 chunk_size = 40
 
+
 def remove_extra(s: str) -> str:
-	"""
-	Remove extra characters
-	"""
-	return re.sub(r'\s', '', re.sub(r'(?m)^:.{8}|..$', '', s))
+    """
+    Remove extra characters
+    """
+    return re.sub(r'\s', '', re.sub(r'(?m)^:.{8}|..$', '', s))
+
 
 def split_by_n(seq: str, n: int):
-	"""
-	Split string by n-length chunks
-	"""
-	for i in range(0, len(seq), n):
-		ch = seq[i:i+n].lstrip('0')
-		yield '0' if ch == '' else ch
+    """
+    Split string by n-length chunks
+    """
+    for i in range(0, len(seq), n):
+        ch = seq[i:i+n].lstrip('0')
+        yield '0' if ch == '' else ch
+
 
 def get_hex_lines(hexstr: str):
-	"""
-	Get chunked hex codes
-	"""
-	pairs = enumerate(split_by_n(remove_extra(hexstr), 2))
-	for x in I.groupby(pairs, lambda x: x[0] // chunk_size):
-		yield (item[1] for item in x[1])
+    """
+    Get chunked hex codes
+    """
+    pairs = enumerate(split_by_n(remove_extra(hexstr), 2))
+    for x in I.groupby(pairs, lambda x: x[0] // chunk_size):
+        yield (item[1] for item in x[1])
+
 
 def get_lines(hexstr: str, address: int):
-	"""
-	Get chunked hex codes with adresses
-	"""
-	start = hex(address)[2:]
+    """
+    Get chunked hex codes with adresses
+    """
+    start = hex(address)[2:]
 
-	for line in get_hex_lines(hexstr):
-		yield hex(address)[2:]+':'
-		for item in line:
-			yield ' '+item
-		yield "\n"
+    for line in get_hex_lines(hexstr):
+        yield hex(address)[2:]+':'
+        for item in line:
+            yield ' '+item
+        yield "\n"
 
-		address += chunk_size
+        address += chunk_size
 
-	yield start + '\nR\n'
+    yield start + '\nR\n'
+
 
 def to_osa_cmds(keys):
-	"""
-	Generate commands for AppleScript
-	"""
-	yield 'activate application "OpenEmulator"'
-	yield 'tell application "System Events"'
+    """
+    Generate commands for AppleScript
+    """
+    yield 'activate application "OpenEmulator"'
+    yield 'tell application "System Events"'
 
-	vkcodes = get_vk_keycodes()
+    vkcodes = get_vk_keycodes()
 
-	for keys_group in keys:
-		for key in keys_group:
-			if key == "\n":
-				yield 'keystroke return'
-				yield 'delay 1'
-			else:
-				vk = vkcodes.get(key)
-				if vk is None:
-					yield 'keystroke "{}"'.format(key)
-				else:
-					yield 'key code {}'.format(vk)
+    for keys_group in keys:
+        for key in keys_group:
+            if key == "\n":
+                yield 'keystroke return'
+                yield 'delay 1'
+            else:
+                vk = vkcodes.get(key)
+                if vk is None:
+                    yield 'keystroke "{}"'.format(key)
+                else:
+                    yield 'key code {}'.format(vk)
 
-				yield 'delay .05'
-	yield 'end tell'
+                yield 'delay .05'
+    yield 'end tell'
+
 
 def get_vk_keycodes() -> dict:
-	"""
-	Get VK codes for characters
-	"""
-	codes = {}
+    """
+    Get VK codes for characters
+    """
+    codes = {}
 
-	fn = '/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/'\
-		 'HIToolbox.framework/Versions/A/Headers/Events.h'
-	try:
-		with open(fn, 'rb') as f:
-			for line in (line.decode('latin-1') for line in f):
-				match = re.match(r'(?i)^\s+kVK_ANSI_(\w)\s*=\s*0x([0-9A-F]+)', line)
-				if match:
-					codes[match[1]] = int(match[2], 16)
-	except FileNotFoundError:
-		pass
+    fn = '/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/'\
+         'HIToolbox.framework/Versions/A/Headers/Events.h'
 
-	return codes
+    mask = re.compile(r'(?i)^\s+kVK_ANSI_(\w)\s*=\s*0x([0-9A-F]+)')
+
+    try:
+        with open(fn, 'rb') as f:
+            for line in (line.decode('latin-1') for line in f):
+                match = re.match(mask, line)
+                if match:
+                    codes[match[1]] = int(match[2], 16)
+    except FileNotFoundError:
+        pass
+
+    return codes
+
 
 for cmds in to_osa_cmds(get_lines(hexstr, address)):
-	print(cmds)
+    print(cmds)
