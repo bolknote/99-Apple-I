@@ -33,19 +33,31 @@ address = 0x280
 chunk_size = 40
 
 def remove_extra(s: str) -> str:
+	"""
+	Remove extra characters
+	"""
 	return re.sub(r'\s', '', re.sub(r'(?m)^:.{8}|..$', '', s))
 
 def split_by_n(seq: str, n: int):
+	"""
+	Split string by n-length chunks
+	"""
 	for i in range(0, len(seq), n):
 		ch = seq[i:i+n].lstrip('0')
 		yield '0' if ch == '' else ch
 
 def get_hex_lines(hexstr: str):
+	"""
+	Get chunked hex codes
+	"""
 	pairs = enumerate(split_by_n(remove_extra(hexstr), 2))
 	for x in I.groupby(pairs, lambda x: x[0] // chunk_size):
 		yield (item[1] for item in x[1])
 
 def get_lines(hexstr: str, address: int):
+	"""
+	Get chunked hex codes with adresses
+	"""
 	start = hex(address)[2:]
 
 	for line in get_hex_lines(hexstr):
@@ -59,6 +71,9 @@ def get_lines(hexstr: str, address: int):
 	yield start + '\nR\n'
 
 def to_osa_cmds(keys):
+	"""
+	Generate commands for AppleScript
+	"""
 	yield 'activate application "OpenEmulator"'
 	yield 'tell application "System Events"'
 
@@ -80,9 +95,13 @@ def to_osa_cmds(keys):
 	yield 'end tell'
 
 def get_vk_keycodes() -> dict:
+	"""
+	Get VK codes for characters
+	"""
 	codes = {}
 
-	fn = '/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/Headers/Events.h'
+	fn = '/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/'\
+		 'HIToolbox.framework/Versions/A/Headers/Events.h'
 	try:
 		with open(fn, 'rb') as f:
 			for line in (line.decode('latin-1') for line in f):

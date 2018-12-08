@@ -66,7 +66,7 @@ BOTTLES:             ; in A, use X, Y
             PHA
             JSR     PRINTNUMBER
             LDX     #3 ; skips len+"NO"
-            LDY     #8 ; length of " BOTTLES"
+            LDY     #8 ; lenght of " BOTTLES"
             PLA
             CMP     #1
             BNE     NO_ONE_
